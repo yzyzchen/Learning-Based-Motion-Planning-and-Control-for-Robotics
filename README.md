@@ -4,10 +4,32 @@
 ![Primary language](https://img.shields.io/badge/Python-100.0%25-red)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-- **Learning-Based Robot Planning with PPO and Diffusion Policy**
+<!-- - **Learning-Based Robot Planning with PPO and Diffusion Policy**
 
 Implemented and compared Proximal Policy Optimization (PPO) and Diffusion Policy for robot motion planning and control, focusing on continuous action spaces in manipulation tasks.
 <table>
+  <tr>
+    <td align="center">
+      <b>PPO</b><br>
+      <img src="assets/PPO.gif" width="300px">
+    </td>
+    <td align="center">
+      <b>Diffusion Policy</b><br>
+      <img src="assets/DP.gif" width="300px">
+    </td>
+  </tr>
+</table> -->
+
+<table>
+  <tr>
+    <td colspan="2" align="center">
+      <h2>Learning-Based Robot Planning with PPO and Diffusion Policy</h2>
+      <p>
+        Implemented and compared <b>Proximal Policy Optimization (PPO)</b> and <b>Diffusion Policy</b>
+        for robot motion planning and control, focusing on continuous action spaces in manipulation tasks.
+      </p>
+    </td>
+  </tr>
   <tr>
     <td align="center">
       <b>PPO</b><br>
