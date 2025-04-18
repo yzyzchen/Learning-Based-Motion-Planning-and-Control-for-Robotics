@@ -24,8 +24,20 @@ Implemented and compared Proximal Policy Optimization (PPO) and Diffusion Policy
 
 Encoded state images into a latent space using a Variational Autoencoder (VAE), then applied Model Predictive Path Integral (MPPI) control in the latent space to drive the robot arm toward the desired state.
 
-![Demo](assets/VAE.gif)
-![Diagram](assets/VAE.png)
+<!-- ![Demo](assets/VAE.gif)
+![Diagram](assets/VAE.png) -->
+<table>
+  <tr>
+    <td align="center">
+      <b>VAE</b><br>
+      <img src="assets/VAE.gif" width="300px">
+    </td>
+    <td align="center">
+      <b>state image</b><br>
+      <img src="assets/VAE.png" width="300px">
+    </td>
+  </tr>
+</table>
 
 
 - **Gaussian Process Based Robot pushing with Obstacle Avoidance**
