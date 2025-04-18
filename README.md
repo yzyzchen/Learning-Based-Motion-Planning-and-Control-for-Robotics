@@ -58,7 +58,7 @@ Implemented and compared Proximal Policy Optimization (PPO) and Diffusion Policy
       <img src="assets/VAE.gif" width="300px">
     </td>
     <td align="center">
-      <b>State Image Input</b><br>
+      <b>State Images</b><br>
       <img src="assets/VAE.png" width="300px">
     </td>
   </tr>
