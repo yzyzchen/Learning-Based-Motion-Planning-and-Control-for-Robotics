@@ -42,35 +42,45 @@ Implemented and compared Proximal Policy Optimization (PPO) and Diffusion Policy
   </tr>
 </table>
 
-- **Vision-Based Robot Control in Latent Space:**
-
-Encoded state images into a latent space using a Variational Autoencoder (VAE), then applied Model Predictive Path Integral (MPPI) control in the latent space to drive the robot arm toward the desired state.
-
 <table>
   <tr>
+    <td colspan="2" align="center">
+      <h2>Vision-Based Robot Control in Latent Space</h2>
+      <p>
+        Encoded state images into a latent space using a <b>Variational Autoencoder (VAE)</b>, then applied
+        <b>Model Predictive Path Integral (MPPI)</b> control in the latent space to drive the robot arm toward the desired state.
+      </p>
+    </td>
+  </tr>
+  <tr>
     <td align="center">
-      <b>VAE</b><br>
+      <b>VAE Latent Control Demo</b><br>
       <img src="assets/VAE.gif" width="300px">
     </td>
     <td align="center">
-      <b>state image</b><br>
+      <b>State Image Input</b><br>
       <img src="assets/VAE.png" width="300px">
     </td>
   </tr>
 </table>
 
-
-- **Gaussian Process Based Robot pushing with Obstacle Avoidance**
-Implemented Gaussian Process to model uncertain dynamics and applied Model Predictive Path Integral (MPPI) control for obstacle-aware object pushing.
-
 <table>
   <tr>
+    <td colspan="2" align="center">
+      <h2>Gaussian Process Based Robot Pushing with Obstacle Avoidance</h2>
+      <p>
+        Implemented <b>Gaussian Process (GP)</b> models to capture uncertain system dynamics, and applied
+        <b>Model Predictive Path Integral (MPPI)</b> control to enable obstacle-aware object pushing under uncertainty.
+      </p>
+    </td>
+  </tr>
+  <tr>
     <td align="center">
-      <b>GP</b><br>
+      <b>GP-Based Pushing Demo</b><br>
       <img src="assets/GP.gif" width="300px">
     </td>
     <td align="center">
-      <b>prediction with GP</b><br>
+      <b>Prediction with GP</b><br>
       <img src="assets/GP.png" width="300px">
     </td>
   </tr>
