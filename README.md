@@ -7,11 +7,18 @@
 - **Learning-Based Robot Planning with PPO and Diffusion Policy**
 
 Implemented and compared Proximal Policy Optimization (PPO) and Diffusion Policy for robot motion planning and control, focusing on continuous action spaces in manipulation tasks.
-
-<p align="center">
-  <img src="assets/PPO.gif" alt="PPO" width="45%"/>
-  <img src="assets/DP.gif" alt="Diffusion Policy" width="45%"/>
-</p>
+<table>
+  <tr>
+    <td align="center">
+      <b>PPO</b><br>
+      <img src="assets/PPO.gif" width="300px">
+    </td>
+    <td align="center">
+      <b>Diffusion Policy</b><br>
+      <img src="assets/DP.gif" width="300px">
+    </td>
+  </tr>
+</table>
 
 - **Vision-Based Robot Control in Latent Space:**
 
