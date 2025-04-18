@@ -4,6 +4,13 @@
 ![Primary language](https://img.shields.io/badge/Python-100.0%25-red)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+- **Learning-Based Robot Planning with PPO and Diffusion Policy**
+Implemented and compared Proximal Policy Optimization (PPO) and Diffusion Policy for robot motion planning and control, focusing on continuous action spaces in manipulation tasks.
+
+<p align="center">
+  <img src="assets/PPO.gif" alt="PPO" width="45%"/>
+  <img src="assets/DP.gif" alt="Diffusion Policy" width="45%"/>
+</p>
 
 - **Vision-Based Robot Control in Latent Space:**
 

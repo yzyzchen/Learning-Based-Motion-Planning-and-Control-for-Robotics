@@ -1,0 +1,6 @@
+action_dim: 3
+action_horizon: 4
+num_timesteps: 100
+obs_dim: 3
+obs_horizon: 2
+pred_horizon: 8

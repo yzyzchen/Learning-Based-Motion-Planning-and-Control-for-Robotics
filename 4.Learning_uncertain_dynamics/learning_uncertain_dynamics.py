@@ -71,10 +71,7 @@ class MultitaskGPModel(gpytorch.models.ExactGP):
 
     def __init__(self, train_x, train_y, likelihood):
         super().__init__(train_x, train_y, likelihood)
-        self.mean_module = None
-        self.covar_module = None
         # --- Your code here
-        #assuming that 2 states are the ouput of the model (x,y) batch size = 2 makes sense
         self.mean_module = ResidualMean(batch_shape=torch.Size([2]))
         self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_num_dims=5,batch_shape=torch.Size([2])),batch_shape=torch.Size([2]))
         # ---
@@ -162,12 +159,9 @@ class ResidualMean(gpytorch.means.Mean):
             mean: torch.tensor of shape (dx, N) containing state vectors
 
         """
-        mean = None
         # --- Your code here
         mean = input[:,:2]
         mean = torch.permute(mean,(1,0))
-        #cast to input data type if needed else remove if its working without it
-        #mean = mean.to(dtype = input.dtype)
         # ---
         return mean
 
@@ -209,38 +203,30 @@ class PushingDynamics(nn.Module):
             pred_sigma: torch.tensor of shape (N, dx, dx) consisting of covariance matrix of predicted state distribution
 
         """
-
-        pred_mu, pred_sigma = None, None
-
-        # --- Your code here
         N,dx = mu.shape
-        #somehow need to get points inorder to use batch_conv
-        points = torch.zeros((N,K,dx))
-        #check for 0 input 
-        flag = torch.count_nonzero(sigma)
-        if (flag==0):
-          pred_mu,pred_sigma = self.predict(state=mu,action=action)
-        else:
-          #using keywords as said in ipynb file to avoid any issues
-          dist = MultivariateNormal(mu , covariance_matrix = sigma)  
-          samples = dist.sample((K,)) #(50,1,2)
-          #print(samples.shape)
-          for k in range(K):
-            #get prediction at each k state to get k gaussian predictions
-            next_mu,next_sig = self.predict(state=samples[k],action = action)
-            #each next mu is (1,2) and each sig is (1,2,2)
-            flag_k = torch.count_nonzero(next_sig)
-            #check for 0 sigma again to avoid singular problems
-            if (flag_k==0):
-              points[:,k,:] = next_mu
-            #else do batched operation
+        samples=torch.zeros((N,K,dx))
+        # --- Your code here
+        # handle 0 input
+        checkcheck = torch.count_nonzero(sigma)
+        if checkcheck==0:
+            pred_mu, pred_sigma = self.predict(state=mu, action=action)
+            return pred_mu, pred_sigma
+        # not 0 input
+        distribution = MultivariateNormal(loc=mu, covariance_matrix=sigma)
+        # sampling
+        K_samples = distribution.sample((K,))
+        for k in range(K):
+            next_mu, next_sigma = self.predict(state=K_samples[k],action=action)
+            checkcheck = torch.count_nonzero(sigma)
+            if checkcheck==0:
+                samples[:,k,:] = next_mu
             else:
-              dist = MultivariateNormal(next_mu, covariance_matrix=next_sig)
-              #sample = dist.sample() gives only (1,2)
-              #print("sample",sample.shape)
-              points[:, k, :] = dist.sample()
-          pred_mu = points.mean(dim=1)
-          pred_sigma = batch_cov(points=points)
+                distribution = MultivariateNormal(loc=next_mu,covariance_matrix=next_sigma)
+                samples[:,k,:] = distribution.sample()
+        pred_mu = samples.mean(dim=1)
+        pred_sigma = batch_cov(points=samples)
+        # ---
+
         return pred_mu, pred_sigma
 
     def propagate_uncertainty_certainty_equivalence(self, mu, sigma, action):
@@ -256,7 +242,7 @@ class PushingDynamics(nn.Module):
         """
         pred_mu, pred_sigma = None, None
         # --- Your code here
-        pred_mu,pred_sigma = self.predict(mu, action)
+        pred_mu, pred_sigma = self.predict(mu, action)
         # ---
         return pred_mu, pred_sigma
 
@@ -287,7 +273,6 @@ class PushingDynamicsGP(PushingDynamics):
             Prediction as a MultitaskMultivariateNormalDistribution, i.e. the result of calling self.gp_model
 
         """
-        pred = None
         # --- Your code here
         cat = torch.cat((state,action),dim=1)
         pred = self.gp_model(cat)
@@ -337,13 +322,12 @@ class PushingDynamicsGP(PushingDynamics):
         """
 
         pred_mu, pred_sigma = None, None
-
-        A = self.gp_model.grad_mu(torch.cat((mu, action), dim=-1))  # want B x 2 x 2
+        A = self.gp_model.grad_mu(torch.cat((mu, action), dim=-1))[:, :, :2]  # want B x 2 x 2
 
         # --- Your code here
-        A = A[:,:,:2]
-        pred_mu, pred_sigma = self.predict(mu, action)  
-        #pred_mu = pred_mu + torch.bmm(A, mu.unsqueeze(-1)).squeeze(-1) # (N,2)
+        # Predict mean and base covariance from GP
+        pred_mu, pred_sigma = self.predict(mu, action)  # pred_sigma is GP uncertainty
+        # Linearized propagation: add the transformed input distribution
         pred_sigma = pred_sigma + torch.bmm(torch.bmm(A, sigma), A.transpose(-1, -2))
         # ---
         return pred_mu, pred_sigma
@@ -368,7 +352,6 @@ class ResidualDynamicsModel(nn.Module):
           nn.ReLU(),
           nn.Linear(100,self.state_dim)
         )
-
         # ---
 
     def forward(self, state, action):
@@ -380,8 +363,8 @@ class ResidualDynamicsModel(nn.Module):
         """
         next_state = None
         # --- Your code here
-        delta = self.layers(torch.cat((state,action),dim=-1))
-        next_state = state + delta
+        x = self.layers(torch.cat((state,action),dim=-1))
+        next_state = state + x
         # ---
         return next_state
 
@@ -393,7 +376,6 @@ class DynamicsNNEnsemble(PushingDynamics):
         super().__init__(propagation_method)
         self.models = nn.ModuleList([ResidualDynamicsModel(state_dim, action_dim) for _ in range(num_ensembles)])
         self.propagation_method = propagation_method
-        #self.num_ensembles = num_ensembles
 
     def forward(self, state, action):
         """
@@ -411,10 +393,9 @@ class DynamicsNNEnsemble(PushingDynamics):
         next_state = None
         # --- Your code here
         B, dx = state.shape
-        next_state = torch.zeros(B, len(self.models), dx)
-        for idx, model in enumerate(self.models):
-            next_state[:, idx, :] = model(state, action)
-
+        next_state = torch.zeros((B, len(self.models), dx))
+        for i in range(len(self.models)):
+            next_state[:,i,:] = self.models[i](state,action) 
         # ---
         return next_state
 
@@ -471,12 +452,12 @@ def train_dynamics_gp_hyperparams(model, likelihood, train_states, train_actions
     mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model.gp_model)
 
     for i in range(training_iter):
-      optimizer.zero_grad()
-      output = model(train_states,train_actions)
-      loss = -mll(output, train_next_states)
-      loss.backward()
-      print('Iter %d/%d - Loss: %.3f' % (i + 1, training_iter, loss.item()))
-      optimizer.step()
+        optimizer.zero_grad()
+        output = model(train_states,train_actions)
+        loss = -mll(output, train_next_states)
+        loss.backward()
+        print('Iter %d/%d - Loss: %.3f' % (i + 1, training_iter, loss.item()))
+        optimizer.step()
     # ---
 
 
@@ -490,7 +471,7 @@ def free_pushing_cost_function(state, action):
     target_pose = TARGET_POSE_FREE_TENSOR  # torch tensor of shape (3,) containing (pose_x, pose_y, pose_theta)
     cost = None
     # --- Your code here
-    sigma = state[:, 2:].reshape(-1, 2, 2)
+    sigma = state[:,2:].reshape(-1, 2, 2)
     trace = sigma.diagonal(dim1=-2, dim2=-1).sum(dim=-1)
     cost = torch.sum((state[:, :2] - target_pose) * (state[:, :2] - target_pose), dim=1) + trace
     # ---
@@ -512,16 +493,14 @@ def obstacle_avoidance_pushing_cost_function(state, action):
     disk_radius = DISK_RADIUS
     cost = None
     # --- Your code here
-    cost = torch.zeros(state.shape[0])
+    cost = torch.zeros(state.shape[0], device=state.device)
     for i in range(state.shape[0]):
-      
-      state_mean = state[i, :2]
-      state_cov = state[i, 2:].view(2, 2)
-      diff = state_mean - target_pose
-      cost[i] = torch.mm(diff.view(1, 2), diff.view(2, 1)) + torch.trace(state_cov)
-      if is_collision(state_mean, obs_centre, obs_radius, disk_radius):
-
-        cost[i] += 100.0
+        mean = state[i, :2]
+        cov = state[i, 2:].view(2, 2)
+        diff = mean - target_pose[:2]
+        cost[i] = diff @ diff + torch.trace(cov)
+        if is_collision(mean, obs_centre, obs_radius, disk_radius):
+            cost[i] += 100.0
     # ---
     return cost
 
@@ -547,20 +526,21 @@ def obstacle_avoidance_pushing_cost_function_samples(state, action, K=10):
     disk_radius = DISK_RADIUS
     cost = None
     # --- Your code here
-    mu = state[:, :2]
-    Sigma = state[:, 2:].view(-1, 2, 2)
+    mu = state[:, :2]  # (B, 2)
+    Sigma = state[:, 2:].view(-1, 2, 2)  # (B, 2, 2)
 
-    # Compute the expected collision cost using K samples from the state distribution
-    samples = torch.distributions.multivariate_normal.MultivariateNormal(mu, Sigma).sample((K,))
-    in_collision = ((samples - obs_centre) ** 2).sum(dim=-1) < (obs_radius + disk_radius) ** 2
-    collision_cost = 100 * in_collision.float().mean(dim=0)
-
-    # Compute the state cost as the distance to the goal plus the trace of the covariance matrix plus the collision cost
-    distance_cost = ((mu - target_pose) ** 2).sum(dim=-1)
-    # trace_cost = Sigma.trace()
-    trace_cost = torch.sum(Sigma.reshape(Sigma.shape[0], -1), dim=-1)
-    cost = distance_cost + trace_cost + collision_cost
-
+    # Sample K points per state
+    mvn = torch.distributions.MultivariateNormal(mu, Sigma)
+    samples = mvn.sample((K,))  # (K, B, 2)
+    # Collision check
+    distsq = ((samples - obs_centre) ** 2).sum(dim=-1)  # (K, B)
+    collisions = distsq < (obs_radius + disk_radius) ** 2
+    collision_cost = 100.0 * collisions.float().mean(dim=0)  # (B,)
+    # Distance to target
+    dist_cost = ((mu - target_pose) ** 2).sum(dim=-1)  # (B,)
+    # Trace of covariance
+    trace_cost = Sigma[:, 0, 0] + Sigma[:, 1, 1]  # (B,)
+    cost = dist_cost + trace_cost + collision_cost
     # ---
     return cost
 
@@ -581,7 +561,7 @@ class PushingController(object):
         state_dim = env.observation_space.shape[0]
         u_min = torch.from_numpy(env.action_space.low) + 1e-5
         u_max = torch.from_numpy(env.action_space.high) - 1e-5
-        noise_sigma = 0.36 * torch.eye(env.action_space.shape[0])
+        noise_sigma = 0.25 * torch.eye(env.action_space.shape[0])
         lambda_value = 0.001
         # ---
         from mppi import MPPI
@@ -606,14 +586,16 @@ class PushingController(object):
         """
         next_state = None
         # --- Your code here
-        state_mu = state[:, :self.env.observation_space.shape[0]] # (B=100,2)
-        state_sigma = state[:, self.env.observation_space.shape[0]:].reshape(-1, self.env.observation_space.shape[0], self.env.observation_space.shape[0]) # (B=100,2,2)
-        
-        next_state_mu, next_state_sigma = self.model.propagate_uncertainty(state_mu, state_sigma,action)
+        obs_dim = self.env.observation_space.shape[0]  # e.g., 2
+        # Extract mean and reshape flattened covariance
+        state_mu = state[:, :obs_dim]  # (B, state_size)
+        state_sigma = state[:, obs_dim:].reshape(-1, obs_dim, obs_dim)  # (B, state_size, state_size)
+        # Predict next state mean and covariance
+        next_state_mu, next_state_sigma = self.model.propagate_uncertainty(state_mu, state_sigma, action)
+        # Flatten covariance and concatenate with mean
+        next_state_sigma_flat = next_state_sigma.reshape(-1, obs_dim ** 2)
+        next_state = torch.cat([next_state_mu, next_state_sigma_flat], dim=-1)
 
-        next_state_sigma = next_state_sigma.reshape(-1, self.env.observation_space.shape[0] ** 2)
-
-        next_state = torch.cat([next_state_mu, next_state_sigma], dim=-1)
         # ---
         return next_state
 
@@ -632,13 +614,16 @@ class PushingController(object):
         action = None
         state_tensor = None
         # --- Your code here
-        state_tensor = torch.zeros(1, self.env.observation_space.shape[0] + self.env.observation_space.shape[0] ** 2)
-        state_tensor[:, :self.env.observation_space.shape[0]] = torch.from_numpy(state)
-        # set initial covariance to 0
-        state_tensor[:, self.env.observation_space.shape[0]:] = torch.zeros(self.env.observation_space.shape[0] ** 2)
+        obs_dim = self.env.observation_space.shape[0]
+        state_tensor = torch.zeros(1, obs_dim + obs_dim ** 2)
+        # Set state mean
+        state_tensor[:, :obs_dim] = torch.from_numpy(state)
+        # Set initial covariance to zero
+        state_tensor[:, obs_dim:] = torch.zeros(obs_dim ** 2)
         # ---
         action_tensor = self.mppi.command(state_tensor)
         # --- Your code here
-        action = action_tensor.detach().numpy().reshape(-1)
+        # Convert to NumPy array
+        action = action_tensor.detach().cpu().numpy().reshape(-1)
         # ---
         return action

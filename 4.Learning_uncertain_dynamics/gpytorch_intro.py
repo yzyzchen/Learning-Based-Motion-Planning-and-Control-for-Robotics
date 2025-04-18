@@ -10,8 +10,6 @@ class RBF_GP(gpytorch.models.ExactGP):
 
     def __init__(self, train_x, train_y, likelihood):
         super().__init__(train_x, train_y, likelihood)
-        self.mean_module = None
-        self.covar_module = None
         # --- Your code here
         self.mean_module = gpytorch.means.ZeroMean()
         self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel())
@@ -26,11 +24,9 @@ class RBF_GP(gpytorch.models.ExactGP):
 class PolynomialGP(gpytorch.models.ExactGP):
     def __init__(self, train_x, train_y, likelihood, degree=4):
         super().__init__(train_x, train_y, likelihood)
-        self.mean_module = None
-        self.covar_module = None
         # --- Your code here
         self.mean_module = gpytorch.means.ZeroMean()
-        self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.PolynomialKernel(power=degree))
+        self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.PolynomialKernel(degree))
         # ---
 
     def forward(self, x):
@@ -43,12 +39,11 @@ class LinearCosineGP(gpytorch.models.ExactGP):
 
     def __init__(self, train_x, train_y, likelihood):
         super().__init__(train_x, train_y, likelihood)
-        self.mean_module = None
-        self.covar_module = None
-        # --- Your code here
         self.mean_module = gpytorch.means.ZeroMean()
-        self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.LinearKernel() + gpytorch.kernels.CosineKernel())
-        # ---
+        self.covar_module = gpytorch.kernels.ScaleKernel(
+            gpytorch.kernels.LinearKernel()+
+            gpytorch.kernels.CosineKernel()
+        )
 
     def forward(self, x):
         mean_x = self.mean_module(x)
@@ -69,31 +64,19 @@ def train_gp_hyperparams(model, likelihood, train_x, train_y, lr):
     """
 
     # --- Your code here
-
-    training_iter = 50
-    #set the model and likelihood in training mode 
     model.train()
     likelihood.train()
-    
-    #set the optimizer as adam with the given learning rate
-    optimizer = torch.optim.Adam(model.parameters(),lr=lr)
-
-    #set the likelihood loss
-    mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood,model)
-
-    for i in range(training_iter):
-      #zero the gradients from prev iter
-      optimizer.zero_grad()
-      #output 
-      output = model(train_x)
-      #calc loss and backprop gradients
-      loss = -mll(output,train_y)
-      #propogate the gradients backward in comptational graph
-      loss.backward()
-      if i%10 == 0:
-        print('Iter {} and loss is {}'.format(i+1,loss.item()))
-      #update the gradients
-      optimizer.step()
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
+    losses = []
+    for _ in range(500):
+        optimizer.zero_grad()
+        pred = model(train_x)
+        loss = -mll(pred, train_y)
+        loss.backward()
+        optimizer.step()
+        losses.append(loss.item())
+    return losses
     # ---
 
 
